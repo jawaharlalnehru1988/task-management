@@ -111,24 +111,32 @@ export default function KanbanBoard() {
   };
 
   const handleStatusChangeBtn = async (id: number, newStatus: Status) => {
+    await handleUpdateTaskData(id, { status: newStatus });
+  };
+
+  const handleUpdateTaskData = async (id: number, updates: Partial<Task>) => {
     const taskIndex = tasks.findIndex(t => t.id === id);
     if (taskIndex < 0) return;
-    const oldStatus = tasks[taskIndex].status;
+    const oldTask = tasks[taskIndex];
 
     setTasks((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, status: newStatus } : t))
+      prev.map((t) => (t.id === id ? { ...t, ...updates } : t))
     );
 
+    if (selectedTask?.id === id) {
+        setSelectedTask(prev => prev ? { ...prev, ...updates } : null);
+    }
+
     try {
-      await updateTask(id, { status: newStatus });
-      if (selectedTask?.id === id) {
-          setSelectedTask(prev => prev ? {...prev, status: newStatus} : null);
-      }
+      await updateTask(id, updates);
     } catch (error) {
-      console.error("Status update error", error);
+      console.error("Task update error", error);
       setTasks((prev) =>
-        prev.map((t) => (t.id === id ? { ...t, status: oldStatus } : t))
+        prev.map((t) => (t.id === id ? oldTask : t))
       );
+      if (selectedTask?.id === id) {
+         setSelectedTask(oldTask);
+      }
     }
   };
 
@@ -238,6 +246,7 @@ export default function KanbanBoard() {
             task={selectedTask} 
             onClose={() => setSelectedTask(null)}
             onStatusChange={(status) => handleStatusChangeBtn(selectedTask.id, status)}
+            onUpdateTask={(updates) => handleUpdateTaskData(selectedTask.id, updates)}
           />
         )}
         {isAddingTask && (

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { format, isPast, isToday, parseISO } from "date-fns";
 import { X, AlignLeft, AlertCircle, Calendar, Hash } from "lucide-react";
@@ -8,12 +8,74 @@ import { cn } from "@/lib/utils";
 export function TaskDetailsModal({ 
   task, 
   onClose, 
-  onStatusChange 
+  onStatusChange,
+  onUpdateTask 
 }: { 
   task: Task, 
   onClose: () => void, 
-  onStatusChange: (status: Status) => void 
+  onStatusChange: (status: Status) => void,
+  onUpdateTask: (updates: Partial<Task>) => void
 }) {
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [editTitleValue, setEditTitleValue] = useState(task.title);
+  const [isEditingDesc, setIsEditingDesc] = useState(false);
+  const [editDescValue, setEditDescValue] = useState(task.description || "");
+
+  const handleTitleSave = () => {
+    setIsEditingTitle(false);
+    if (editTitleValue.trim() !== task.title && editTitleValue.trim() !== "") {
+      onUpdateTask({ title: editTitleValue.trim() });
+    } else {
+      setEditTitleValue(task.title);
+    }
+  };
+
+  const handleDescSave = () => {
+    setIsEditingDesc(false);
+    const newDesc = editDescValue.trim() === "" ? null : editDescValue.trim();
+    if (newDesc !== task.description) {
+      onUpdateTask({ description: newDesc });
+    }
+  };
+  
+  const [isEditingStartDate, setIsEditingStartDate] = useState(false);
+  const [editStartDateValue, setEditStartDateValue] = useState(task.start_date ? task.start_date.split("T")[0] : "");
+  const handleStartDateSave = () => {
+    setIsEditingStartDate(false);
+    const apiVal = editStartDateValue ? new Date(editStartDateValue).toISOString() : null;
+    if (apiVal !== task.start_date) {
+      onUpdateTask({ start_date: apiVal });
+    }
+  };
+
+  const [isEditingDueDate, setIsEditingDueDate] = useState(false);
+  const [editDueDateValue, setEditDueDateValue] = useState(task.due_date ? task.due_date.split("T")[0] : "");
+  const handleDueDateSave = () => {
+    setIsEditingDueDate(false);
+    if (!editDueDateValue) return; // Due date is required
+    const apiVal = new Date(editDueDateValue).toISOString();
+    if (apiVal !== task.due_date) {
+      onUpdateTask({ due_date: apiVal });
+    }
+  };
+
+  const [isEditingAssignee, setIsEditingAssignee] = useState(false);
+  const [editAssigneeValue, setEditAssigneeValue] = useState(task.assigned_to || "");
+  const handleAssigneeSave = () => {
+    setIsEditingAssignee(false);
+    const newVal = editAssigneeValue.trim() === "" ? null : editAssigneeValue.trim();
+    if (newVal !== task.assigned_to) {
+      onUpdateTask({ assigned_to: newVal });
+    }
+  };
+
+  const [isEditingTags, setIsEditingTags] = useState(false);
+  const [editTagsValue, setEditTagsValue] = useState(task.tags ? task.tags.join(", ") : "");
+  const handleTagsSave = () => {
+    setIsEditingTags(false);
+    const parsedTags = editTagsValue.split(",").map(t => t.trim()).filter(Boolean);
+    onUpdateTask({ tags: parsedTags.length > 0 ? parsedTags : ["New Task"] });
+  };
   const isPastDue = isPast(parseISO(task.due_date)) && !isToday(parseISO(task.due_date));
   const isDueToday = isToday(parseISO(task.due_date));
   const showDateAlert = (isPastDue || isDueToday) && task.status !== "Completed";
@@ -41,9 +103,24 @@ export function TaskDetailsModal({
                   {task.status}
                 </span>
              </div>
-             <h2 className="text-2xl font-semibold text-gray-900 leading-tight">
-               {task.title}
-             </h2>
+             {isEditingTitle ? (
+               <input
+                 autoFocus
+                 value={editTitleValue}
+                 onChange={(e) => setEditTitleValue(e.target.value)}
+                 onBlur={handleTitleSave}
+                 onKeyDown={(e) => { if (e.key === 'Enter') handleTitleSave(); }}
+                 className="text-2xl font-semibold text-gray-900 leading-tight w-full bg-white border border-blue-400 rounded px-2 py-1 outline-none shadow-sm focus:ring-2 focus:ring-blue-500"
+               />
+             ) : (
+               <h2 
+                 onDoubleClick={() => { setEditTitleValue(task.title); setIsEditingTitle(true); }}
+                 className="text-2xl font-semibold text-gray-900 leading-tight cursor-text hover:bg-gray-50 p-1 rounded -ml-1 transition-colors border border-transparent hover:border-gray-200"
+                 title="Double click to edit"
+               >
+                 {task.title}
+               </h2>
+             )}
           </div>
           <button 
              onClick={onClose} 
@@ -58,37 +135,109 @@ export function TaskDetailsModal({
              <AlignLeft className="w-5 h-5 text-gray-400 mt-1" />
              <div className="flex-1">
                 <h3 className="text-base font-semibold text-gray-800 mb-2">Description</h3>
-                <p className="text-gray-600 text-sm leading-relaxed whitespace-pre-wrap">
-                  {task.description || "No detailed description provided for this task."}
-                </p>
+                {isEditingDesc ? (
+                  <textarea
+                    autoFocus
+                    value={editDescValue}
+                    onChange={(e) => setEditDescValue(e.target.value)}
+                    onBlur={handleDescSave}
+                    className="w-full text-gray-600 text-sm leading-relaxed whitespace-pre-wrap bg-white border border-blue-400 rounded px-3 py-2 outline-none shadow-sm focus:ring-2 focus:ring-blue-500 min-h-[100px] resize-none"
+                  />
+                ) : (
+                  <p 
+                    onDoubleClick={() => { setEditDescValue(task.description || ""); setIsEditingDesc(true); }}
+                    className={cn(
+                      "text-sm leading-relaxed whitespace-pre-wrap cursor-text hover:bg-gray-50 p-2 rounded -ml-2 transition-colors border border-transparent hover:border-gray-200 min-h-[60px]", 
+                      !task.description ? "text-gray-400 italic" : "text-gray-600"
+                    )}
+                    title="Double click to edit"
+                  >
+                    {task.description || "Double click to add a description..."}
+                  </p>
+                )}
              </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 bg-gray-50 p-4 rounded-xl border border-gray-100">
-             {task.start_date && (
-               <div>
-                  <h4 className="text-sm font-semibold text-gray-700 mb-1">Start Date</h4>
-                  <div className="flex items-center gap-2 text-sm font-medium text-gray-600">
-                    <Calendar className="w-4 h-4" />
-                    {format(parseISO(task.start_date), "MMMM d, yyyy")}
-                  </div>
-               </div>
-             )}
              <div>
-                <h4 className="text-sm font-semibold text-gray-700 mb-1">Due Date</h4>
-                <div className={cn("flex items-center gap-2 text-sm font-medium", showDateAlert ? "text-red-600" : "text-gray-600")}>
-                  {showDateAlert ? <AlertCircle className="w-4 h-4" /> : <Calendar className="w-4 h-4" />}
-                  {format(parseISO(task.due_date), "MMMM d, yyyy")}
-                </div>
+                <h4 className="text-sm font-semibold text-gray-700 mb-1">Start Date</h4>
+                {isEditingStartDate ? (
+                  <input
+                    type="date"
+                    autoFocus
+                    value={editStartDateValue}
+                    onChange={(e) => setEditStartDateValue(e.target.value)}
+                    onBlur={handleStartDateSave}
+                    className="w-full text-sm font-medium text-gray-800 bg-white border border-blue-400 rounded px-2 py-1 outline-none shadow-sm focus:ring-2 focus:ring-blue-500"
+                  />
+                ) : (
+                  <div 
+                    onDoubleClick={() => { setEditStartDateValue(task.start_date ? task.start_date.split("T")[0] : ""); setIsEditingStartDate(true); }}
+                    className={cn(
+                       "flex items-center gap-2 text-sm font-medium cursor-text hover:bg-gray-200/50 p-1 rounded -ml-1 transition-colors border border-transparent hover:border-gray-200 min-h-[32px]", 
+                       !task.start_date ? "text-gray-400 italic" : "text-gray-600"
+                    )}
+                    title="Double click to edit"
+                  >
+                    <Calendar className="w-4 h-4" />
+                    {task.start_date ? format(parseISO(task.start_date), "MMMM d, yyyy") : "No start date..."}
+                  </div>
+                )}
              </div>
+             
+             <div>
+                <h4 className="text-sm font-semibold text-gray-700 mb-1">Due Date *</h4>
+                {isEditingDueDate ? (
+                  <input
+                    type="date"
+                    autoFocus
+                    required
+                    value={editDueDateValue}
+                    onChange={(e) => setEditDueDateValue(e.target.value)}
+                    onBlur={handleDueDateSave}
+                    className="w-full text-sm font-medium text-gray-800 bg-white border border-blue-400 rounded px-2 py-1 outline-none shadow-sm focus:ring-2 focus:ring-blue-500"
+                  />
+                ) : (
+                  <div 
+                    onDoubleClick={() => { setEditDueDateValue(task.due_date ? task.due_date.split("T")[0] : ""); setIsEditingDueDate(true); }}
+                    className={cn(
+                       "flex items-center gap-2 text-sm font-medium cursor-text hover:bg-gray-200/50 p-1 rounded -ml-1 transition-colors border border-transparent hover:border-gray-200 min-h-[32px]", 
+                       showDateAlert ? "text-red-600" : "text-gray-600"
+                    )}
+                    title="Double click to edit"
+                  >
+                    {showDateAlert ? <AlertCircle className="w-4 h-4" /> : <Calendar className="w-4 h-4" />}
+                    {task.due_date ? format(parseISO(task.due_date), "MMMM d, yyyy") : "Set due date..."}
+                  </div>
+                )}
+             </div>
+             
              <div>
                 <h4 className="text-sm font-semibold text-gray-700 mb-1">Assignee</h4>
-                <div className="flex items-center gap-2">
-                   <div className="w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-[10px] font-bold shadow-sm">
-                      AJ
-                   </div>
-                   <span className="text-sm text-gray-600 font-medium">Alex Johnson</span>
-                </div>
+                {isEditingAssignee ? (
+                  <input
+                    autoFocus
+                    value={editAssigneeValue}
+                    onChange={(e) => setEditAssigneeValue(e.target.value)}
+                    onBlur={handleAssigneeSave}
+                    onKeyDown={(e) => { if (e.key === 'Enter') handleAssigneeSave(); }}
+                    placeholder="E.g. Alex Johnson"
+                    className="w-full text-sm font-medium text-gray-800 bg-white border border-blue-400 rounded px-2 py-1 outline-none shadow-sm focus:ring-2 focus:ring-blue-500"
+                  />
+                ) : (
+                  <div 
+                    onDoubleClick={() => { setEditAssigneeValue(task.assigned_to || ""); setIsEditingAssignee(true); }}
+                    className="flex items-center gap-2 cursor-text hover:bg-gray-200/50 p-1 rounded -ml-1 transition-colors border border-transparent hover:border-gray-200 min-h-[32px]"
+                    title="Double click to edit"
+                  >
+                     <div className="w-6 h-6 shrink-0 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-[10px] font-bold shadow-sm">
+                        {task.assigned_to ? task.assigned_to.substring(0, 2).toUpperCase() : "?"}
+                     </div>
+                     <span className={cn("text-sm font-medium truncate", !task.assigned_to ? "text-gray-400 italic" : "text-gray-600")}>
+                        {task.assigned_to || "Unassigned..."}
+                     </span>
+                  </div>
+                )}
              </div>
           </div>
 
@@ -97,13 +246,33 @@ export function TaskDetailsModal({
                <Hash className="w-4 h-4 text-gray-400" />
                Tags
              </h3>
-             <div className="flex flex-wrap gap-2">
-                {task.tags.map((tag) => (
-                  <span key={tag} className="bg-gray-100 text-gray-700 text-sm px-3 py-1.5 rounded-lg border border-gray-200 font-medium hover:bg-gray-200 cursor-pointer transition-colors">
-                    {tag}
-                  </span>
-                ))}
-            </div>
+             {isEditingTags ? (
+                <input
+                  autoFocus
+                  value={editTagsValue}
+                  onChange={(e) => setEditTagsValue(e.target.value)}
+                  onBlur={handleTagsSave}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleTagsSave(); }}
+                  placeholder="e.g. Design, Urgent"
+                  className="w-full max-w-sm text-sm font-medium text-gray-800 bg-white border border-blue-400 rounded px-3 py-2 outline-none shadow-sm focus:ring-2 focus:ring-blue-500"
+                />
+             ) : (
+                <div 
+                  className="flex flex-wrap gap-2 min-h-[36px] w-full cursor-text p-2 hover:bg-gray-50 rounded transition-colors -m-2"
+                  onDoubleClick={() => { setEditTagsValue(task.tags ? task.tags.join(", ") : ""); setIsEditingTags(true); }}
+                  title="Double click to edit tags"
+                >
+                   {task.tags && task.tags.length > 0 ? (
+                     task.tags.map((tag) => (
+                       <span key={tag} className="bg-gray-100 text-gray-700 text-sm px-3 py-1 rounded-lg border border-gray-200 font-medium">
+                         {tag}
+                       </span>
+                     ))
+                   ) : (
+                     <span className="text-gray-400 italic text-sm py-1">Double click to add tags...</span>
+                   )}
+               </div>
+             )}
           </div>
         </div>
 
