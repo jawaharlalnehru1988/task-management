@@ -51,3 +51,9 @@ export async function deleteTask(id: number): Promise<void> {
   });
   if (!res.ok) throw new Error(`Failed to delete task ${id}`);
 }
+export async function deleteEpic(id: number): Promise<void> {
+  const res = await fetch(`${EPIC_API_BASE}${id}/`, {
+    method: "DELETE",
+  });
+  if (!res.ok) throw new Error(`Failed to delete epic ${id}`);
+}

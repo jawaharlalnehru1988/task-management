@@ -1,14 +1,14 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { AnimatePresence } from "framer-motion";
-import { Plus, Filter, CheckCircle2, Layout, FolderKanban, Hash } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Plus, Filter, CheckCircle2, Layout, FolderKanban, Hash, Trash2, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Task, Status, Priority, COLUMNS, PRIORITY_WEIGHT, Epic } from "@/types/task";
 import { TaskCard } from "@/components/TaskCard";
 import { TaskDetailsModal } from "@/components/TaskDetailsModal";
 import { AddTaskModal } from "@/components/AddTaskModal";
-import { fetchTasks, fetchEpics, createEpic, createTask, updateTask, deleteTask as deleteApiTask } from "@/lib/api";
+import { fetchTasks, fetchEpics, createEpic, createTask, updateTask, deleteTask as deleteApiTask, deleteEpic as deleteApiEpic } from "@/lib/api";
 
 export default function KanbanBoard() {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -19,7 +19,9 @@ export default function KanbanBoard() {
   // Epic specific states
   const [selectedEpicId, setSelectedEpicId] = useState<number | null>(null);
   const [isAddingEpic, setIsAddingEpic] = useState(false);
+  const [deletingEpicId, setDeletingEpicId] = useState<number | null>(null);
   const [newEpicTitle, setNewEpicTitle] = useState("");
+  const [newEpicClient, setNewEpicClient] = useState("");
 
   const [draggedTaskId, setDraggedTaskId] = useState<number | null>(null);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
@@ -108,14 +110,37 @@ export default function KanbanBoard() {
   const handleCreateEpic = async () => {
     if (!newEpicTitle.trim()) return;
     try {
-      const created = await createEpic({ title: newEpicTitle.trim(), client_name: null });
+      const created = await createEpic({ 
+        title: newEpicTitle.trim(), 
+        client_name: newEpicClient.trim() || null 
+      });
       setEpics([...epics, created]);
       setNewEpicTitle("");
+      setNewEpicClient("");
       setIsAddingEpic(false);
       setSelectedEpicId(created.id);
     } catch (err) {
       console.error("Epic creation failed", err);
       alert("Failed to create Epic.");
+    }
+  };
+
+  const handleDeleteEpic = async (id: number) => {
+    const backupEpics = [...epics];
+    setEpics((prev) => prev.filter((epic) => epic.id !== id));
+    
+    if (selectedEpicId === id) {
+      setSelectedEpicId(null);
+    }
+    
+    setDeletingEpicId(null);
+
+    try {
+      await deleteApiEpic(id);
+    } catch (err) {
+      console.error("Epic deletion failed", err);
+      setEpics(backupEpics);
+      alert("Failed to delete Epic on server.");
     }
   };
 
@@ -219,37 +244,80 @@ export default function KanbanBoard() {
             </div>
             
             {isAddingEpic && (
-               <div className="mb-3">
-                  <input
-                    autoFocus
-                    placeholder="Epic title..."
-                    value={newEpicTitle}
-                    onChange={(e) => setNewEpicTitle(e.target.value)}
-                    onKeyDown={(e) => {
-                       if (e.key === 'Enter') handleCreateEpic();
-                       if (e.key === 'Escape') setIsAddingEpic(false);
-                    }}
-                    onBlur={() => {
-                        if(newEpicTitle) handleCreateEpic();
-                        else setIsAddingEpic(false);
-                    }}
-                    className="w-full text-sm font-medium text-gray-800 bg-white border border-blue-400 rounded px-3 py-2 outline-none shadow-sm focus:ring-2 focus:ring-blue-500"
-                  />
+               <div className="mb-4 bg-gray-50 p-3 rounded-lg border border-blue-100 shadow-sm space-y-3">
+                  <div>
+                    <label className="text-[10px] uppercase font-bold text-gray-400 mb-1 block">Title</label>
+                    <input
+                      autoFocus
+                      placeholder="Epic title..."
+                      value={newEpicTitle}
+                      onChange={(e) => setNewEpicTitle(e.target.value)}
+                      onKeyDown={(e) => {
+                         if (e.key === 'Enter') handleCreateEpic();
+                         if (e.key === 'Escape') setIsAddingEpic(false);
+                      }}
+                      className="w-full text-sm font-medium text-gray-800 bg-white border border-gray-200 rounded px-2 py-1.5 outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] uppercase font-bold text-gray-400 mb-1 block">Client Name</label>
+                    <input
+                      placeholder="Client..."
+                      value={newEpicClient}
+                      onChange={(e) => setNewEpicClient(e.target.value)}
+                      onKeyDown={(e) => {
+                         if (e.key === 'Enter') handleCreateEpic();
+                         if (e.key === 'Escape') setIsAddingEpic(false);
+                      }}
+                      className="w-full text-sm font-medium text-gray-800 bg-white border border-gray-200 rounded px-2 py-1.5 outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={handleCreateEpic}
+                      className="flex-1 text-xs font-bold bg-blue-600 text-white py-1.5 rounded hover:bg-blue-700 transition-colors"
+                    >
+                      Save
+                    </button>
+                    <button 
+                      onClick={() => setIsAddingEpic(false)}
+                      className="flex-1 text-xs font-bold bg-white text-gray-500 py-1.5 rounded border border-gray-200 hover:bg-gray-50 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
                </div>
             )}
 
             <div className="space-y-1">
                {epics.map(epic => (
-                  <button
+                  <div
                     key={epic.id}
                     onClick={() => setSelectedEpicId(epic.id)}
                     className={cn(
-                      "w-full flex justify-between items-center px-3 py-2 rounded-lg text-sm transition-colors text-left font-medium",
+                      "w-full group flex justify-between items-center px-3 py-2 rounded-lg text-sm transition-colors text-left font-medium cursor-pointer",
                       selectedEpicId === epic.id ? "bg-blue-50 text-blue-700 font-semibold shadow-sm border border-blue-100/50" : "text-gray-700 hover:bg-gray-50 border border-transparent"
                     )}
                   >
-                    <span className="truncate pr-2">{epic.title}</span>
-                  </button>
+                    <div className="flex flex-col truncate pr-2">
+                      <span className="truncate">{epic.title}</span>
+                      {epic.client_name && (
+                        <span className="text-[10px] opacity-70 truncate font-normal leading-tight">
+                          {epic.client_name}
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      onClick={(e) => {
+                         e.stopPropagation();
+                         setDeletingEpicId(epic.id);
+                      }}
+                      className="p-1 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity rounded hover:bg-red-50"
+                      title="Delete Epic"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                ))}
             </div>
          </div>
@@ -361,6 +429,48 @@ export default function KanbanBoard() {
              onAddTask={handleCreateTask}
              initialStatus={isAddingTask}
           />
+        )}
+        {deletingEpicId && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+             <motion.div 
+               initial={{ opacity: 0 }}
+               animate={{ opacity: 1 }}
+               exit={{ opacity: 0 }}
+               className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+               onClick={() => setDeletingEpicId(null)}
+             />
+             <motion.div
+               initial={{ opacity: 0, scale: 0.95, y: 20 }}
+               animate={{ opacity: 1, scale: 1, y: 0 }}
+               exit={{ opacity: 0, scale: 0.95, y: 20 }}
+               className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden z-[70] p-6 relative"
+             >
+                <div className="flex items-center gap-4 mb-6">
+                   <div className="bg-red-50 p-3 rounded-full">
+                      <AlertTriangle className="w-6 h-6 text-red-600" />
+                   </div>
+                   <div>
+                      <h2 className="text-lg font-bold text-gray-900">Delete Epic?</h2>
+                      <p className="text-sm text-gray-500">This action cannot be undone and will unbind all tasks.</p>
+                   </div>
+                </div>
+                
+                <div className="flex gap-3 mt-8">
+                   <button 
+                     onClick={() => setDeletingEpicId(null)}
+                     className="flex-1 py-2.5 rounded-lg text-sm font-semibold bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors capitalize"
+                   >
+                     cancel
+                   </button>
+                   <button 
+                     onClick={() => handleDeleteEpic(deletingEpicId)}
+                     className="flex-1 py-2.5 rounded-lg text-sm font-semibold bg-red-600 text-white hover:bg-red-700 transition-colors capitalize shadow-sm"
+                   >
+                     delete
+                   </button>
+                </div>
+             </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </div>
