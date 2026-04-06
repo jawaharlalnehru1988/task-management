@@ -9,8 +9,17 @@ export interface Task {
   priority: Priority;
   status: Status;
   due_date: string;
-  tags: string[];
   assigned_to?: string | null;
+  epic?: number | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface Epic {
+  id: number;
+  title: string;
+  client_name?: string | null;
+  clientName?: string | null;
   created_at?: string;
   updated_at?: string;
 }

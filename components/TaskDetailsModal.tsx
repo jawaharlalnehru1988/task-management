@@ -68,14 +68,6 @@ export function TaskDetailsModal({
       onUpdateTask({ assigned_to: newVal });
     }
   };
-
-  const [isEditingTags, setIsEditingTags] = useState(false);
-  const [editTagsValue, setEditTagsValue] = useState(task.tags ? task.tags.join(", ") : "");
-  const handleTagsSave = () => {
-    setIsEditingTags(false);
-    const parsedTags = editTagsValue.split(",").map(t => t.trim()).filter(Boolean);
-    onUpdateTask({ tags: parsedTags.length > 0 ? parsedTags : ["New Task"] });
-  };
   const isPastDue = isPast(parseISO(task.due_date)) && !isToday(parseISO(task.due_date));
   const isDueToday = isToday(parseISO(task.due_date));
   const showDateAlert = (isPastDue || isDueToday) && task.status !== "Completed";
@@ -241,39 +233,6 @@ export function TaskDetailsModal({
              </div>
           </div>
 
-          <div>
-             <h3 className="text-sm font-semibold text-gray-800 mb-3 flex items-center gap-2">
-               <Hash className="w-4 h-4 text-gray-400" />
-               Tags
-             </h3>
-             {isEditingTags ? (
-                <input
-                  autoFocus
-                  value={editTagsValue}
-                  onChange={(e) => setEditTagsValue(e.target.value)}
-                  onBlur={handleTagsSave}
-                  onKeyDown={(e) => { if (e.key === 'Enter') handleTagsSave(); }}
-                  placeholder="e.g. Design, Urgent"
-                  className="w-full max-w-sm text-sm font-medium text-gray-800 bg-white border border-blue-400 rounded px-3 py-2 outline-none shadow-sm focus:ring-2 focus:ring-blue-500"
-                />
-             ) : (
-                <div 
-                  className="flex flex-wrap gap-2 min-h-[36px] w-full cursor-text p-2 hover:bg-gray-50 rounded transition-colors -m-2"
-                  onDoubleClick={() => { setEditTagsValue(task.tags ? task.tags.join(", ") : ""); setIsEditingTags(true); }}
-                  title="Double click to edit tags"
-                >
-                   {task.tags && task.tags.length > 0 ? (
-                     task.tags.map((tag) => (
-                       <span key={tag} className="bg-gray-100 text-gray-700 text-sm px-3 py-1 rounded-lg border border-gray-200 font-medium">
-                         {tag}
-                       </span>
-                     ))
-                   ) : (
-                     <span className="text-gray-400 italic text-sm py-1">Double click to add tags...</span>
-                   )}
-               </div>
-             )}
-          </div>
         </div>
 
         <div className="p-4 border-t border-gray-100 bg-gray-50 flex items-center justify-between">

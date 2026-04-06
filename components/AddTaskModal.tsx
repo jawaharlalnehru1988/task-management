@@ -16,14 +16,11 @@ export function AddTaskModal({ onClose, onAddTask, initialStatus = "To Do" }: Ad
   const [priority, setPriority] = useState<Priority>("Medium");
   const [startDate, setStartDate] = useState("");
   const [dueDate, setDueDate] = useState("");
-  const [tags, setTags] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !dueDate) return;
     
-    const parsedTags = tags.split(',').map(t => t.trim()).filter(Boolean);
-
     onAddTask({
       title,
       description,
@@ -31,7 +28,6 @@ export function AddTaskModal({ onClose, onAddTask, initialStatus = "To Do" }: Ad
       priority,
       start_date: startDate ? new Date(startDate).toISOString() : null,
       due_date: new Date(dueDate).toISOString(),
-      tags: parsedTags.length > 0 ? parsedTags : ["New Task"],
     });
   };
 
@@ -131,17 +127,6 @@ export function AddTaskModal({ onClose, onAddTask, initialStatus = "To Do" }: Ad
                 className="w-full bg-white border border-gray-200 text-gray-800 text-sm px-4 py-2.5 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors cursor-pointer"
               />
             </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Tags (comma separated)</label>
-            <input 
-              type="text" 
-              value={tags}
-              onChange={(e) => setTags(e.target.value)}
-              placeholder="e.g. Design, Urgent, Dev"
-              className="w-full bg-white border border-gray-200 text-gray-800 text-sm px-4 py-2.5 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
-            />
           </div>
 
           <div className="mt-4 pt-4 border-t border-gray-100 flex justify-end gap-3">

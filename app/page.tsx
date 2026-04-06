@@ -2,18 +2,25 @@
 
 import React, { useState, useEffect } from "react";
 import { AnimatePresence } from "framer-motion";
-import { Plus, Filter, CheckCircle2 } from "lucide-react";
+import { Plus, Filter, CheckCircle2, Layout, FolderKanban, Hash } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Task, Status, Priority, COLUMNS, PRIORITY_WEIGHT } from "@/types/task";
+import { Task, Status, Priority, COLUMNS, PRIORITY_WEIGHT, Epic } from "@/types/task";
 import { TaskCard } from "@/components/TaskCard";
 import { TaskDetailsModal } from "@/components/TaskDetailsModal";
 import { AddTaskModal } from "@/components/AddTaskModal";
-import { fetchTasks, createTask, updateTask, deleteTask as deleteApiTask } from "@/lib/api";
+import { fetchTasks, fetchEpics, createEpic, createTask, updateTask, deleteTask as deleteApiTask } from "@/lib/api";
 
 export default function KanbanBoard() {
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [epics, setEpics] = useState<Epic[]>([]);
   const [isClient, setIsClient] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Epic specific states
+  const [selectedEpicId, setSelectedEpicId] = useState<number | null>(null);
+  const [isAddingEpic, setIsAddingEpic] = useState(false);
+  const [newEpicTitle, setNewEpicTitle] = useState("");
+
   const [draggedTaskId, setDraggedTaskId] = useState<number | null>(null);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [isAddingTask, setIsAddingTask] = useState<Status | null>(null);
@@ -26,13 +33,14 @@ export default function KanbanBoard() {
 
   useEffect(() => {
     setIsClient(true);
-    fetchTasks()
-      .then(data => {
-        setTasks(data);
+    Promise.all([fetchTasks(), fetchEpics()])
+      .then(([tasksData, epicsData]) => {
+        setTasks(tasksData);
+        setEpics(epicsData);
         setIsLoading(false);
       })
-      .catch(err => {
-        console.error("Failed to load tasks", err);
+      .catch((err) => {
+        console.error("Failed to load initial data", err);
         setIsLoading(false);
       });
   }, []);
@@ -61,7 +69,6 @@ export default function KanbanBoard() {
       return;
     }
 
-    // Optimistic Update
     setTasks((prev) =>
       prev.map((task) =>
         task.id === idToUpdate ? { ...task, status: targetStatus } : task
@@ -69,12 +76,10 @@ export default function KanbanBoard() {
     );
     setDraggedTaskId(null);
 
-    // Persist API
     try {
       await updateTask(idToUpdate, { status: targetStatus });
     } catch (err) {
       console.error("Failed to update status", err);
-      // Revert if failed
       setTasks((prev) =>
         prev.map((task) =>
           task.id === idToUpdate ? { ...task, status: oldTask.status } : task
@@ -89,12 +94,28 @@ export default function KanbanBoard() {
 
   const handleCreateTask = async (newTaskData: Omit<Task, 'id' | 'created_at' | 'updated_at'>) => {
     try {
-      const created = await createTask(newTaskData);
+      // Inject currently selected epic inherently
+      const mergedData = { ...newTaskData, epic: selectedEpicId };
+      const created = await createTask(mergedData);
       setTasks([...tasks, created]);
       setIsAddingTask(null);
     } catch (err) {
       console.error("Creation failed", err);
       alert("Failed to create the task on server.");
+    }
+  };
+
+  const handleCreateEpic = async () => {
+    if (!newEpicTitle.trim()) return;
+    try {
+      const created = await createEpic({ title: newEpicTitle.trim(), client_name: null });
+      setEpics([...epics, created]);
+      setNewEpicTitle("");
+      setIsAddingEpic(false);
+      setSelectedEpicId(created.id);
+    } catch (err) {
+      console.error("Epic creation failed", err);
+      alert("Failed to create Epic.");
     }
   };
 
@@ -151,94 +172,179 @@ export default function KanbanBoard() {
     );
   }
 
+  // Filter tasks based on globally selected Epic Context
+  const filteredTasks = selectedEpicId === null 
+    ? tasks 
+    : tasks.filter(t => t.epic === selectedEpicId);
+
   return (
-    <div className="min-h-screen bg-[#F8F9FA] p-4 md:p-8 text-gray-800 font-sans">
-      <header className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900 flex items-center gap-2">
-            <CheckCircle2 className="w-8 h-8 text-blue-600" />
-            Task Management
-          </h1>
-          <p className="text-gray-500 mt-1.5 md:ml-10 text-sm">Organize your work with this Google Workspace inspired board.</p>
-        </div>
-        <div className="flex items-center gap-3">
-           <button 
-             onClick={() => setIsAddingTask("To Do")}
-             className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-full font-medium transition-colors shadow-sm flex items-center gap-2 text-sm"
-           >
-             <Plus className="w-4 h-4" /> Add Task
-           </button>
-        </div>
-      </header>
-
-      <div className="flex flex-col md:flex-row gap-6 items-start h-full pb-10 overflow-x-auto snap-x snap-mandatory hide-scrollbars">
-        {COLUMNS.map((columnStatus) => {
-          let columnTasks = tasks.filter((t) => t.status === columnStatus);
-          
-          if (sortByUrgency[columnStatus]) {
-            columnTasks = [...columnTasks].sort(
-              (a, b) => PRIORITY_WEIGHT[b.priority] - PRIORITY_WEIGHT[a.priority]
-            );
-          }
-
-          return (
-            <div
-              key={columnStatus}
-              className="flex-1 w-full min-w-[320px] md:min-w-[300px] shrink-0 bg-[#F1F3F4] rounded-xl flex flex-col shadow-sm border border-transparent snap-center transition-colors"
-              onDragOver={handleDragOver}
-              onDrop={(e) => handleDrop(e, columnStatus)}
-            >
-              <div className="p-4 flex items-center justify-between group">
-                <div className="flex items-center gap-2">
-                  <h2 className="font-medium text-gray-800 tracking-tight">{columnStatus}</h2>
-                  <span className="bg-gray-200/80 text-gray-600 text-xs py-0.5 px-2 rounded-full font-medium shadow-sm">
-                    {columnTasks.length}
-                  </span>
-                </div>
-                <div className="flex items-center gap-1 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button
-                    onClick={() => toggleSort(columnStatus)}
-                    className={cn(
-                      "p-1.5 rounded-md transition-colors",
-                      sortByUrgency[columnStatus] ? "bg-white text-blue-600 shadow-sm" : "hover:bg-gray-200 text-gray-500 hover:text-gray-700"
-                    )}
-                    title="Priority Check Filter"
-                  >
-                    <Filter className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => setIsAddingTask(columnStatus)}
-                    className="p-1.5 hover:bg-gray-200 text-gray-500 hover:text-gray-700 rounded-md transition-colors"
-                    title="Quick Add"
-                  >
-                    <Plus className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-
-              <div className="px-3 pb-3 pt-1 flex-1 overflow-y-auto w-full min-h-[500px] flex flex-col gap-3">
-                <AnimatePresence>
-                  {columnTasks.map((task) => (
-                    <TaskCard
-                      key={task.id}
-                      task={task}
-                      onDragStart={handleDragStart}
-                      onDelete={() => handleDeleteTask(task.id)}
-                      onStatusChange={columnStatus !== "Completed" ? () => handleStatusChangeBtn(task.id, "Completed") : undefined}
-                      onSelect={() => setSelectedTask(task)}
-                    />
-                  ))}
-                </AnimatePresence>
-                {columnTasks.length === 0 && (
-                  <div className="text-center py-8 text-sm text-gray-400 border-2 border-dashed border-gray-300 rounded-lg mx-1 mt-1 transition-colors hover:border-gray-400 hover:text-gray-500 cursor-default">
-                    Drop tasks here
-                  </div>
-                )}
-              </div>
+    <div className="h-screen bg-[#F8F9FA] text-gray-800 font-sans flex overflow-hidden">
+      
+      {/* Left Sidebar Layout */}
+      <aside className="w-64 bg-white border-r border-gray-200 flex flex-col shrink-0">
+         <div className="p-5 border-b border-gray-100 flex items-center gap-3">
+             <div className="bg-blue-600 text-white p-2 rounded-lg">
+                <CheckCircle2 className="w-6 h-6" />
+             </div>
+             <h1 className="text-lg font-bold tracking-tight text-gray-900">Workspace</h1>
+         </div>
+         
+         <div className="p-4 flex-1 overflow-y-auto">
+            <h2 className="text-xs uppercase tracking-wider font-bold text-gray-400 mb-3 ml-2 flex items-center gap-2">
+              <Layout className="w-4 h-4" /> Views
+            </h2>
+            <div className="space-y-1 mb-8">
+               <button
+                 onClick={() => setSelectedEpicId(null)}
+                 className={cn(
+                   "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+                   selectedEpicId === null ? "bg-blue-50 text-blue-700" : "text-gray-600 hover:bg-gray-100"
+                 )}
+               >
+                 <FolderKanban className="w-4 h-4" /> Global Flow
+               </button>
             </div>
-          );
-        })}
-      </div>
+
+            <div className="flex items-center justify-between mb-3 ml-2">
+               <h2 className="text-xs uppercase tracking-wider font-bold text-gray-400 flex items-center gap-2">
+                 <Hash className="w-4 h-4" /> Epics
+               </h2>
+               <button 
+                 onClick={() => setIsAddingEpic(true)}
+                 className="p-1 hover:bg-gray-100 rounded text-gray-400 hover:text-blue-600 transition-colors"
+                 title="New Epic"
+               >
+                 <Plus className="w-3.5 h-3.5" />
+               </button>
+            </div>
+            
+            {isAddingEpic && (
+               <div className="mb-3">
+                  <input
+                    autoFocus
+                    placeholder="Epic title..."
+                    value={newEpicTitle}
+                    onChange={(e) => setNewEpicTitle(e.target.value)}
+                    onKeyDown={(e) => {
+                       if (e.key === 'Enter') handleCreateEpic();
+                       if (e.key === 'Escape') setIsAddingEpic(false);
+                    }}
+                    onBlur={() => {
+                        if(newEpicTitle) handleCreateEpic();
+                        else setIsAddingEpic(false);
+                    }}
+                    className="w-full text-sm font-medium text-gray-800 bg-white border border-blue-400 rounded px-3 py-2 outline-none shadow-sm focus:ring-2 focus:ring-blue-500"
+                  />
+               </div>
+            )}
+
+            <div className="space-y-1">
+               {epics.map(epic => (
+                  <button
+                    key={epic.id}
+                    onClick={() => setSelectedEpicId(epic.id)}
+                    className={cn(
+                      "w-full flex justify-between items-center px-3 py-2 rounded-lg text-sm transition-colors text-left font-medium",
+                      selectedEpicId === epic.id ? "bg-blue-50 text-blue-700 font-semibold shadow-sm border border-blue-100/50" : "text-gray-700 hover:bg-gray-50 border border-transparent"
+                    )}
+                  >
+                    <span className="truncate pr-2">{epic.title}</span>
+                  </button>
+               ))}
+            </div>
+         </div>
+      </aside>
+
+      {/* Main Board View */}
+      <main className="flex-1 overflow-hidden flex flex-col p-4 md:p-8">
+        <header className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0">
+          <div>
+            <h2 className="text-2xl font-semibold tracking-tight text-gray-900 flex items-center gap-2">
+              {selectedEpicId === null ? "Global Flow" : epics.find(e => e.id === selectedEpicId)?.title || "Epic Flow"}
+            </h2>
+            <p className="text-gray-500 mt-1 text-sm">
+              {selectedEpicId === null ? "Viewing all tasks across the workspace." : `Filtering tasks designated to this Epic.`}
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => setIsAddingTask("To Do")}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-full font-medium transition-colors shadow-sm flex items-center gap-2 text-sm focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            >
+              <Plus className="w-4 h-4" /> Add Task
+            </button>
+          </div>
+        </header>
+
+        <div className="flex flex-col md:flex-row gap-6 items-start h-full pb-4 overflow-x-auto snap-x snap-mandatory">
+          {COLUMNS.map((columnStatus) => {
+            let columnTasks = filteredTasks.filter((t) => t.status === columnStatus);
+            
+            if (sortByUrgency[columnStatus]) {
+              columnTasks = [...columnTasks].sort(
+                (a, b) => PRIORITY_WEIGHT[b.priority] - PRIORITY_WEIGHT[a.priority]
+              );
+            }
+
+            return (
+              <div
+                key={columnStatus}
+                className="flex-[0_0_auto] w-full min-w-[280px] md:min-w-[260px] max-w-[280px] bg-[#F1F3F4] rounded-xl flex flex-col shadow-sm border border-transparent snap-center transition-colors h-full max-h-full"
+                onDragOver={handleDragOver}
+                onDrop={(e) => handleDrop(e, columnStatus)}
+              >
+                <div className="p-4 flex items-center justify-between group shrink-0">
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-semibold text-gray-800 tracking-tight text-sm uppercase">{columnStatus}</h3>
+                    <span className="bg-gray-200/80 text-gray-600 text-xs py-0.5 px-2 rounded-full font-medium shadow-sm">
+                      {columnTasks.length}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                      onClick={() => toggleSort(columnStatus)}
+                      className={cn(
+                        "p-1.5 rounded-md transition-colors",
+                        sortByUrgency[columnStatus] ? "bg-white text-blue-600 shadow-sm" : "hover:bg-gray-200 text-gray-500 hover:text-gray-700"
+                      )}
+                      title="Priority Check Filter"
+                    >
+                      <Filter className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => setIsAddingTask(columnStatus)}
+                      className="p-1.5 hover:bg-gray-200 text-gray-500 hover:text-gray-700 rounded-md transition-colors"
+                      title="Quick Add"
+                    >
+                      <Plus className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="px-3 pb-3 pt-1 flex-1 overflow-y-auto w-full flex flex-col gap-3 min-h-[100px]">
+                  <AnimatePresence>
+                    {columnTasks.map((task) => (
+                      <TaskCard
+                        key={task.id}
+                        task={task}
+                        onDragStart={handleDragStart}
+                        onDelete={() => handleDeleteTask(task.id)}
+                        onStatusChange={columnStatus !== "Completed" ? () => handleStatusChangeBtn(task.id, "Completed") : undefined}
+                        onSelect={() => setSelectedTask(task)}
+                      />
+                    ))}
+                  </AnimatePresence>
+                  {columnTasks.length === 0 && (
+                    <div className="text-center py-8 text-sm text-gray-400 border-2 border-dashed border-gray-300 rounded-lg mx-1 mt-1 transition-colors hover:border-gray-400 hover:text-gray-500 cursor-default">
+                      Drop tasks here
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </main>
 
       <AnimatePresence>
         {selectedTask && (

@@ -73,18 +73,6 @@ export function TaskCard({
       </h3>
 
       <div className="flex flex-col gap-3 mt-auto">
-        <div className="flex flex-wrap gap-1.5">
-          {task.tags.map((tag) => (
-            <span
-              key={tag}
-              className="flex items-center gap-0.5 bg-[#F1F3F4] text-gray-600 text-xs px-2 py-1 rounded-md border border-gray-100"
-            >
-              <Hash className="w-3 h-3 text-gray-400" />
-              {tag}
-            </span>
-          ))}
-        </div>
-
         <div className="flex items-center justify-between mt-1 pt-3 border-t border-gray-100">
           <div
             className={cn(
