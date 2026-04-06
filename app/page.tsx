@@ -2,7 +2,9 @@
 
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Filter, CheckCircle2, Layout, FolderKanban, Hash, Trash2, AlertTriangle } from "lucide-react";
+import { Plus, Filter, CheckCircle2, Layout, FolderKanban, Hash, Trash2, AlertTriangle, LogOut } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
+import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Task, Status, Priority, COLUMNS, PRIORITY_WEIGHT, Epic } from "@/types/task";
 import { TaskCard } from "@/components/TaskCard";
@@ -11,6 +13,9 @@ import { AddTaskModal } from "@/components/AddTaskModal";
 import { fetchTasks, fetchEpics, createEpic, createTask, updateTask, deleteTask as deleteApiTask, deleteEpic as deleteApiEpic } from "@/lib/api";
 
 export default function KanbanBoard() {
+  const { token, isAuthenticated, isLoading: authLoading, logout } = useAuth();
+  const router = useRouter();
+
   const [tasks, setTasks] = useState<Task[]>([]);
   const [epics, setEpics] = useState<Epic[]>([]);
   const [isClient, setIsClient] = useState(false);
@@ -35,17 +40,32 @@ export default function KanbanBoard() {
 
   useEffect(() => {
     setIsClient(true);
-    Promise.all([fetchTasks(), fetchEpics()])
-      .then(([tasksData, epicsData]) => {
-        setTasks(tasksData);
-        setEpics(epicsData);
-        setIsLoading(false);
-      })
-      .catch((err) => {
-        console.error("Failed to load initial data", err);
-        setIsLoading(false);
-      });
   }, []);
+
+  useEffect(() => {
+    if (isClient && !authLoading && !isAuthenticated) {
+      router.replace("/login");
+    }
+  }, [isClient, authLoading, isAuthenticated, router]);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      setIsLoading(true);
+      Promise.all([fetchTasks(), fetchEpics()])
+        .then(([tasksData, epicsData]) => {
+          setTasks(tasksData);
+          setEpics(epicsData);
+          setIsLoading(false);
+        })
+        .catch((err) => {
+          console.error("Failed to load initial data", err);
+          setIsLoading(false);
+          if (err.message === "Unauthorized") {
+            logout();
+          }
+        });
+    }
+  }, [isAuthenticated, logout]);
 
   const handleDragStart = (e: any, id: number) => {
     setDraggedTaskId(id);
@@ -186,7 +206,7 @@ export default function KanbanBoard() {
     }
   };
 
-  if (!isClient || isLoading) {
+  if (!isClient || authLoading || (isAuthenticated && isLoading)) {
     return (
       <div className="min-h-screen bg-[#F8F9FA] flex items-center justify-center">
         <div className="animate-pulse flex flex-col items-center gap-4">
@@ -196,6 +216,8 @@ export default function KanbanBoard() {
       </div>
     );
   }
+
+  if (!isAuthenticated) return null;
 
   // Filter tasks based on globally selected Epic Context
   const filteredTasks = selectedEpicId === null 
@@ -320,6 +342,19 @@ export default function KanbanBoard() {
                   </div>
                ))}
             </div>
+         </div>
+
+         {/* Logout Section */}
+         <div className="p-4 border-t border-gray-100">
+            <button 
+              onClick={logout}
+              className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-semibold text-gray-500 hover:text-red-600 hover:bg-red-50 transition-all group"
+            >
+              <div className="p-1.5 rounded-md group-hover:bg-red-100 transition-colors">
+                <LogOut className="w-4 h-4" />
+              </div>
+              Sign Out
+            </button>
          </div>
       </aside>
 

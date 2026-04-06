@@ -1,16 +1,45 @@
 import { Task, Status, Epic } from "@/types/task";
 
-const API_BASE = "https://api.asknehru.com/api/tasks/";
-const EPIC_API_BASE = "https://api.asknehru.com/api/epics/";
+const API_BASE = "https://api.asknehru.com/api/tasks";
+const EPIC_API_BASE = "https://api.asknehru.com/api/epics";
+const AUTH_API_BASE = "https://api.asknehru.com/api/auth";
+
+function getHeaders() {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  if (typeof window !== "undefined") {
+    const token = localStorage.getItem("auth_token");
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+  }
+  return headers;
+}
+
+export async function loginApi(usernameOrEmail: string, password: string): Promise<{ token: string }> {
+  const res = await fetch(`${AUTH_API_BASE}/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ usernameOrEmail, password }),
+  });
+  if (!res.ok) throw new Error("Invalid credentials");
+  return res.json();
+}
 
 export async function fetchTasks(): Promise<Task[]> {
-  const res = await fetch(API_BASE);
+  const res = await fetch(API_BASE, { headers: getHeaders() });
+  if (res.status === 401) {
+     if (typeof window !== "undefined") localStorage.removeItem("auth_token");
+     throw new Error("Unauthorized");
+  }
   if (!res.ok) throw new Error("Failed to fetch tasks");
   return res.json();
 }
 
 export async function fetchEpics(): Promise<Epic[]> {
-  const res = await fetch(EPIC_API_BASE);
+  const res = await fetch(EPIC_API_BASE, { headers: getHeaders() });
+  if (res.status === 401) throw new Error("Unauthorized");
   if (!res.ok) throw new Error("Failed to fetch epics");
   return res.json();
 }
@@ -18,7 +47,7 @@ export async function fetchEpics(): Promise<Epic[]> {
 export async function createTask(data: Omit<Task, "id" | "created_at" | "updated_at">): Promise<Task> {
   const res = await fetch(API_BASE, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: getHeaders(),
     body: JSON.stringify(data),
   });
   if (!res.ok) throw new Error("Failed to create task");
@@ -28,7 +57,7 @@ export async function createTask(data: Omit<Task, "id" | "created_at" | "updated
 export async function createEpic(data: Omit<Epic, "id" | "created_at" | "updated_at">): Promise<Epic> {
   const res = await fetch(EPIC_API_BASE, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: getHeaders(),
     body: JSON.stringify(data),
   });
   if (!res.ok) throw new Error("Failed to create epic");
@@ -36,9 +65,9 @@ export async function createEpic(data: Omit<Epic, "id" | "created_at" | "updated
 }
 
 export async function updateTask(id: number, updates: Partial<Task>): Promise<Task> {
-  const res = await fetch(`${API_BASE}${id}/`, {
+  const res = await fetch(`${API_BASE}/${id}`, {
     method: "PATCH",
-    headers: { "Content-Type": "application/json" },
+    headers: getHeaders(),
     body: JSON.stringify(updates),
   });
   if (!res.ok) throw new Error(`Failed to update task ${id}`);
@@ -46,14 +75,17 @@ export async function updateTask(id: number, updates: Partial<Task>): Promise<Ta
 }
 
 export async function deleteTask(id: number): Promise<void> {
-  const res = await fetch(`${API_BASE}${id}/`, {
+  const res = await fetch(`${API_BASE}/${id}`, {
     method: "DELETE",
+    headers: getHeaders(),
   });
   if (!res.ok) throw new Error(`Failed to delete task ${id}`);
 }
+
 export async function deleteEpic(id: number): Promise<void> {
-  const res = await fetch(`${EPIC_API_BASE}${id}/`, {
+  const res = await fetch(`${EPIC_API_BASE}/${id}`, {
     method: "DELETE",
+    headers: getHeaders(),
   });
   if (!res.ok) throw new Error(`Failed to delete epic ${id}`);
 }
