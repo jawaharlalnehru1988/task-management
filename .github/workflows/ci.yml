@@ -22,6 +22,7 @@ jobs:
 
       - name: Install Dependencies
         run: npm ci
+
       - name: Build Project
         run: npm run build
         env:
@@ -31,8 +32,10 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: build-artifact
-          path: out/ # ONLY upload the contents of the out folder
-          if-no-files-found: error # This will make the build FAIL if out/ is missing
+          path: |
+            out/
+            package.json
+            package-lock.json
 
   deploy:
     needs: build
@@ -43,7 +46,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: build-artifact
-          path: out # Download directly into an 'out' folder
+          path: build-files
 
       - name: Clear Destination and Transfer
         uses: appleboy/scp-action@master
@@ -52,9 +55,9 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           passphrase: ${{ secrets.SSH_PASSPHRASE }}
-          source: "out/*" # Transfer everything inside the 'out' folder
+          source: "build-files/*"
           target: "/var/www/task-management/out/"
-          strip_components: 1 # This ensures files go into /out/ and not /out/out/
+          strip_components: 1
           rm: true
 
       - name: Reload Nginx
