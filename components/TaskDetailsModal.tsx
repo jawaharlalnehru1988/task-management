@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { format, isPast, isToday, parseISO } from "date-fns";
-import { X, AlignLeft, AlertCircle, Calendar, Hash } from "lucide-react";
+import { X, AlignLeft, AlertCircle, Calendar, User } from "lucide-react";
 import { Task, Status, COLUMNS, PRIORITY_COLORS } from "@/types/task";
 import { cn } from "@/lib/utils";
 
@@ -60,13 +60,10 @@ export function TaskDetailsModal({
   };
 
   const [isEditingAssignee, setIsEditingAssignee] = useState(false);
-  const [editAssigneeValue, setEditAssigneeValue] = useState(task.assigned_to || "");
+  const [editAssigneeValue, setEditAssigneeValue] = useState(task.assigned_to_username || "");
   const handleAssigneeSave = () => {
     setIsEditingAssignee(false);
-    const newVal = editAssigneeValue.trim() === "" ? null : editAssigneeValue.trim();
-    if (newVal !== task.assigned_to) {
-      onUpdateTask({ assigned_to: newVal });
-    }
+    // assigned_to is a read-only display field here; editing not wired to ID lookup
   };
   const isPastDue = isPast(parseISO(task.due_date)) && !isToday(parseISO(task.due_date));
   const isDueToday = isToday(parseISO(task.due_date));
@@ -150,7 +147,7 @@ export function TaskDetailsModal({
              </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 bg-gray-50 p-4 rounded-xl border border-gray-100">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 bg-gray-50 p-4 rounded-xl border border-gray-100">
              <div>
                 <h4 className="text-sm font-semibold text-gray-700 mb-1">Start Date</h4>
                 {isEditingStartDate ? (
@@ -205,31 +202,40 @@ export function TaskDetailsModal({
              </div>
              
              <div>
-                <h4 className="text-sm font-semibold text-gray-700 mb-1">Assignee</h4>
-                {isEditingAssignee ? (
-                  <input
-                    autoFocus
-                    value={editAssigneeValue}
-                    onChange={(e) => setEditAssigneeValue(e.target.value)}
-                    onBlur={handleAssigneeSave}
-                    onKeyDown={(e) => { if (e.key === 'Enter') handleAssigneeSave(); }}
-                    placeholder="E.g. Alex Johnson"
-                    className="w-full text-sm font-medium text-gray-800 bg-white border border-blue-400 rounded px-2 py-1 outline-none shadow-sm focus:ring-2 focus:ring-blue-500"
-                  />
-                ) : (
-                  <div 
-                    onDoubleClick={() => { setEditAssigneeValue(task.assigned_to || ""); setIsEditingAssignee(true); }}
-                    className="flex items-center gap-2 cursor-text hover:bg-gray-200/50 p-1 rounded -ml-1 transition-colors border border-transparent hover:border-gray-200 min-h-[32px]"
-                    title="Double click to edit"
-                  >
-                     <div className="w-6 h-6 shrink-0 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-[10px] font-bold shadow-sm">
-                        {task.assigned_to ? String(task.assigned_to).substring(0, 2).toUpperCase() : "?"}
-                     </div>
-                     <span className={cn("text-sm font-medium truncate", !task.assigned_to ? "text-gray-400 italic" : "text-gray-600")}>
-                        {task.assigned_to || "Unassigned..."}
-                     </span>
+                <h4 className="text-sm font-semibold text-gray-700 mb-1">Assigned To</h4>
+                <div
+                  className="flex items-center gap-2 p-1 rounded -ml-1 min-h-[32px]"
+                  title={task.assigned_to_username ? `Assigned to ${task.assigned_to_username}` : "Unassigned"}
+                >
+                  <div className="w-6 h-6 shrink-0 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-[10px] font-bold shadow-sm">
+                    {task.assigned_to_username ? String(task.assigned_to_username).substring(0, 2).toUpperCase() : "?"}
                   </div>
-                )}
+                  <span className={cn("text-sm font-medium truncate", !task.assigned_to_username ? "text-gray-400 italic" : "text-gray-600")}>
+                    {task.assigned_to_username || "Unassigned..."}
+                  </span>
+                </div>
+             </div>
+
+             <div>
+                <h4 className="text-sm font-semibold text-gray-700 mb-1">Assigner (Created By)</h4>
+                <div
+                  className="flex items-center gap-2 p-1 rounded -ml-1 min-h-[32px]"
+                  title={task.created_by_username ? `Created by ${task.created_by_username}` : "Creator unknown"}
+                >
+                  <div className="w-6 h-6 shrink-0 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-[10px] font-bold shadow-sm">
+                    {task.created_by_username ? String(task.created_by_username).substring(0, 2).toUpperCase() : <User className="w-3 h-3" />}
+                  </div>
+                  <span className={cn("text-sm font-medium truncate", !task.created_by_username ? "text-gray-400 italic" : "text-gray-600")}>
+                    {task.created_by_username || "Unknown"}
+                  </span>
+                </div>
+             </div>
+
+             <div>
+                <h4 className="text-sm font-semibold text-gray-700 mb-1">Effort</h4>
+                <div className={cn("flex items-center gap-2 p-1 rounded -ml-1 min-h-[32px] text-sm font-medium", task.effort_time ? "text-gray-600" : "text-gray-400 italic")}>
+                  {task.effort_time || "Not set"}
+                </div>
              </div>
           </div>
 

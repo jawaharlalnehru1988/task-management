@@ -1,6 +1,6 @@
 import React from "react";
 import { motion } from "framer-motion";
-import { Trash2, Hash, Calendar, AlertCircle, Circle, CheckCircle2 } from "lucide-react";
+import { Trash2, Calendar, AlertCircle, Circle, CheckCircle2 } from "lucide-react";
 import { format, isPast, isToday, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Task, PRIORITY_COLORS } from "@/types/task";
@@ -73,23 +73,33 @@ export function TaskCard({
       </h3>
 
       <div className="flex items-center justify-between mt-2 pt-3 border-t border-gray-50">
-        <div
-          className={cn(
-            "flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-tight",
-            showDateAlert ? "text-red-500" : "text-gray-400"
+        <div className="flex flex-col gap-1">
+          <div
+            className={cn(
+              "flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-tight",
+              showDateAlert ? "text-red-500" : "text-gray-400"
+            )}
+          >
+            {showDateAlert ? (
+              <AlertCircle className="w-3.5 h-3.5" />
+            ) : (
+              <Calendar className="w-3.5 h-3.5" />
+            )}
+            {showDateAlert && isPastDue ? "Overdue" : showDateAlert && isDueToday ? "Due Today" : format(parseISO(task.due_date), "MMM d")}
+          </div>
+          <div className="text-[11px] text-gray-500 truncate max-w-[145px]" title={task.created_by_username ? `Created by ${task.created_by_username}` : "Creator unknown"}>
+            {task.created_by_username ? `By ${task.created_by_username}` : "By Unknown"}
+          </div>
+          {task.effort_time && (
+            <div className="text-[11px] text-gray-500">
+              {task.effort_time} effort
+            </div>
           )}
-        >
-          {showDateAlert ? (
-            <AlertCircle className="w-3.5 h-3.5" />
-          ) : (
-            <Calendar className="w-3.5 h-3.5" />
-          )}
-          {showDateAlert && isPastDue ? "Overdue" : showDateAlert && isDueToday ? "Due Today" : format(parseISO(task.due_date), "MMM d")}
         </div>
 
         <div className="relative group/assignee">
-          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex items-center justify-center text-[10px] font-bold border-2 border-white shadow-sm transition-transform group-hover/assignee:scale-110" title={task.assigned_to ? `Assigned to ${task.assigned_to}` : "Unassigned"}>
-            {task.assigned_to ? String(task.assigned_to).substring(0, 2).toUpperCase() : "?"}
+          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex items-center justify-center text-[10px] font-bold border-2 border-white shadow-sm transition-transform group-hover/assignee:scale-110" title={task.assigned_to_username ? `Assigned to ${task.assigned_to_username}` : "Unassigned"}>
+            {task.assigned_to_username ? String(task.assigned_to_username).substring(0, 2).toUpperCase() : "?"}
           </div>
         </div>
       </div>

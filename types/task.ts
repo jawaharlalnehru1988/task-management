@@ -8,8 +8,12 @@ export interface Task {
   start_date?: string | null;
   priority: Priority;
   status: Status;
+  effort_time?: string | null;
   due_date: string;
-  assigned_to?: string | null;
+  assigned_to?: number | null;
+  assigned_to_username?: string | null;
+  created_by?: number | null;
+  created_by_username?: string | null;
   epic?: number | null;
   created_at?: string;
   updated_at?: string;

@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { X } from "lucide-react";
 import { Task, Status, Priority, COLUMNS } from "@/types/task";
+import { fetchUsers, User } from "@/lib/api";
 
 interface AddTaskModalProps {
   onClose: () => void;
@@ -14,8 +15,15 @@ export function AddTaskModal({ onClose, onAddTask, initialStatus = "To Do" }: Ad
   const [description, setDescription] = useState("");
   const [status, setStatus] = useState<Status>(initialStatus);
   const [priority, setPriority] = useState<Priority>("Medium");
+  const [effortTime, setEffortTime] = useState("");
   const [startDate, setStartDate] = useState("");
   const [dueDate, setDueDate] = useState("");
+  const [assignedTo, setAssignedTo] = useState<number | "">("");
+  const [users, setUsers] = useState<User[]>([]);
+
+  useEffect(() => {
+    fetchUsers().then(setUsers).catch(() => {});
+  }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,8 +34,10 @@ export function AddTaskModal({ onClose, onAddTask, initialStatus = "To Do" }: Ad
       description,
       status,
       priority,
+      effort_time: effortTime || null,
       start_date: startDate ? new Date(startDate).toISOString() : null,
       due_date: new Date(dueDate).toISOString(),
+      assigned_to: assignedTo !== "" ? assignedTo : null,
     });
   };
 
@@ -97,6 +107,17 @@ export function AddTaskModal({ onClose, onAddTask, initialStatus = "To Do" }: Ad
           </div>
 
           <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Effort (HH:MM)</label>
+            <input
+              type="time"
+              value={effortTime}
+              onChange={(e) => setEffortTime(e.target.value)}
+              step={60}
+              className="w-full bg-white border border-gray-200 text-gray-800 text-sm px-4 py-2.5 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors cursor-pointer"
+            />
+          </div>
+
+          <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1.5">Description</label>
             <textarea 
               rows={3}
@@ -105,6 +126,20 @@ export function AddTaskModal({ onClose, onAddTask, initialStatus = "To Do" }: Ad
               placeholder="Add details, requirements or context..."
               className="w-full bg-white border border-gray-200 text-gray-800 text-sm px-4 py-3 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors resize-none"
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Assign To</label>
+            <select
+              value={assignedTo}
+              onChange={(e) => setAssignedTo(e.target.value === "" ? "" : Number(e.target.value))}
+              className="w-full bg-white border border-gray-200 text-gray-800 text-sm px-4 py-2.5 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors cursor-pointer"
+            >
+              <option value="">— Unassigned —</option>
+              {users.map(u => (
+                <option key={u.id} value={u.id}>{u.username}</option>
+              ))}
+            </select>
           </div>
 
           <div className="grid grid-cols-2 gap-4">

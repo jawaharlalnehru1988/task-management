@@ -59,6 +59,13 @@ export async function fetchEpics(): Promise<Epic[]> {
   return res.json();
 }
 
+export async function fetchUsers(): Promise<User[]> {
+  const res = await fetch(`${API_ROOT}/users`, { headers: getHeaders() });
+  if (res.status === 401) throw new Error("Unauthorized");
+  if (!res.ok) throw new Error("Failed to fetch users");
+  return res.json();
+}
+
 export async function createTask(data: Omit<Task, "id" | "created_at" | "updated_at">): Promise<Task> {
   const res = await fetch(API_BASE, {
     method: "POST",
