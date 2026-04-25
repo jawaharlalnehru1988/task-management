@@ -8,6 +8,13 @@ import { motion, AnimatePresence } from "framer-motion";
 export function Navbar() {
   const { user, logout } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+
+  const notifications = [
+    { id: 1, title: "New Task Assigned", description: "You have been assigned to 'API Integration'", time: "5m ago", type: "task" },
+    { id: 2, title: "Mentioned in Comment", description: "Sarah mentioned you in Project Alpha", time: "2h ago", type: "mention" },
+    { id: 3, title: "System Update", description: "Platform maintenance at 2:00 AM", time: "5h ago", type: "system" },
+  ];
 
   return (
     <nav className="h-16 bg-white border-b border-gray-200 px-6 flex items-center justify-between shrink-0 relative z-50">
@@ -23,16 +30,79 @@ export function Navbar() {
       </div>
 
       <div className="flex items-center gap-5">
-        <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-all relative">
-          <Bell className="w-5 h-5" />
-          <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 border-2 border-white rounded-full" />
-        </button>
+        <div className="relative">
+          <button 
+            onClick={() => {
+              setIsNotificationsOpen(!isNotificationsOpen);
+              setIsMenuOpen(false);
+            }}
+            className={`p-2 rounded-full transition-all relative ${isNotificationsOpen ? "text-blue-600 bg-blue-50" : "text-gray-400 hover:text-gray-600 hover:bg-gray-100"}`}
+          >
+            <Bell className="w-5 h-5" />
+            <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 border-2 border-white rounded-full" />
+          </button>
+
+          <AnimatePresence>
+            {isNotificationsOpen && (
+              <>
+                <motion.div 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="fixed inset-0 z-10"
+                  onClick={() => setIsNotificationsOpen(false)}
+                />
+                <motion.div
+                  initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                  className="absolute right-0 mt-2 w-80 bg-white rounded-2xl shadow-2xl border border-gray-100 z-20 overflow-hidden"
+                >
+                  <div className="px-4 py-3 border-b border-gray-50 flex items-center justify-between">
+                    <h3 className="text-sm font-bold text-gray-900">Notifications</h3>
+                    <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full uppercase">3 New</span>
+                  </div>
+                  
+                  <div className="max-h-[400px] overflow-y-auto">
+                    {notifications.map((notif) => (
+                      <button 
+                        key={notif.id}
+                        className="w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-0 group"
+                      >
+                        <div className="flex gap-3">
+                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                            notif.type === "task" ? "bg-green-50 text-green-600" :
+                            notif.type === "mention" ? "bg-purple-50 text-purple-600" : "bg-blue-50 text-blue-600"
+                          }`}>
+                            <Bell className="w-4 h-4" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-bold text-gray-900 group-hover:text-blue-600 transition-colors">{notif.title}</p>
+                            <p className="text-xs text-gray-500 truncate">{notif.description}</p>
+                            <p className="text-[10px] text-gray-400 mt-1">{notif.time}</p>
+                          </div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                  
+                  <button className="w-full py-2 text-xs font-bold text-gray-500 hover:text-blue-600 hover:bg-gray-50 transition-all border-t border-gray-50">
+                    View All Notifications
+                  </button>
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>
+        </div>
 
         <div className="h-8 w-px bg-gray-200 mx-1" />
 
         <div className="relative">
           <button 
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
+            onClick={() => {
+              setIsMenuOpen(!isMenuOpen);
+              setIsNotificationsOpen(false);
+            }}
             className="flex items-center gap-3 pl-2 group cursor-pointer outline-none"
           >
             <div className="flex flex-col items-end hidden sm:flex">
