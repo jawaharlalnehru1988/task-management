@@ -223,7 +223,7 @@ export function TaskDetailsModal({
                     title="Double click to edit"
                   >
                      <div className="w-6 h-6 shrink-0 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-[10px] font-bold shadow-sm">
-                        {task.assigned_to ? task.assigned_to.substring(0, 2).toUpperCase() : "?"}
+                        {task.assigned_to ? String(task.assigned_to).substring(0, 2).toUpperCase() : "?"}
                      </div>
                      <span className={cn("text-sm font-medium truncate", !task.assigned_to ? "text-gray-400 italic" : "text-gray-600")}>
                         {task.assigned_to || "Unassigned..."}

@@ -34,7 +34,7 @@ export function TaskCard({
       onDragStart={(e: any) => onDragStart(e, task.id)}
       onClick={onSelect}
       className={cn(
-        "group bg-white p-4 rounded-xl shadow-sm border border-[#dadce0] hover:shadow-md cursor-grab active:cursor-grabbing w-full flex flex-col gap-3 relative overflow-hidden transition-[box-shadow]",
+        "group bg-white p-5 rounded-2xl shadow-sm border border-gray-100 hover:shadow-xl hover:border-blue-100 cursor-grab active:cursor-grabbing w-full flex flex-col gap-4 relative transition-all duration-300",
         task.status === "Completed" && "opacity-75 bg-gray-50/50"
       )}
     >
@@ -52,7 +52,7 @@ export function TaskCard({
           {task.status === "Completed" && <CheckCircle2 className="w-4 h-4 text-green-500" />}
           <span
             className={cn(
-              "text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded border",
+              "text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-md border",
               PRIORITY_COLORS[task.priority]
             )}
           >
@@ -61,39 +61,35 @@ export function TaskCard({
         </div>
         <button
           onClick={(e) => { e.stopPropagation(); onDelete(); }}
-          className="text-gray-400 hover:bg-red-50 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all p-1.5 rounded-md -mt-1 -mr-1"
+          className="text-gray-300 hover:bg-red-50 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all p-1.5 rounded-lg -mt-1 -mr-1"
           title="Delete Task"
         >
           <Trash2 className="w-3.5 h-3.5" />
         </button>
       </div>
 
-      <h3 className={cn("font-medium text-gray-800 leading-snug", task.status === "Completed" && "line-through text-gray-500")}>
+      <h3 className={cn("font-semibold text-gray-800 leading-relaxed text-sm", task.status === "Completed" && "line-through text-gray-500 font-normal")}>
         {task.title}
       </h3>
 
-      <div className="flex flex-col gap-3 mt-auto">
-        <div className="flex items-center justify-between mt-1 pt-3 border-t border-gray-100">
-          <div
-            className={cn(
-              "flex items-center gap-1.5 text-xs font-medium",
-              showDateAlert
-                ? "text-red-600"
-                : "text-gray-500"
-            )}
-          >
-            {showDateAlert ? (
-              <AlertCircle className="w-3.5 h-3.5" />
-            ) : (
-              <Calendar className="w-3.5 h-3.5" />
-            )}
-            {showDateAlert && isPastDue ? "Overdue" : showDateAlert && isDueToday ? "Due Today" : format(parseISO(task.due_date), "MMM d")}
-          </div>
+      <div className="flex items-center justify-between mt-2 pt-3 border-t border-gray-50">
+        <div
+          className={cn(
+            "flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-tight",
+            showDateAlert ? "text-red-500" : "text-gray-400"
+          )}
+        >
+          {showDateAlert ? (
+            <AlertCircle className="w-3.5 h-3.5" />
+          ) : (
+            <Calendar className="w-3.5 h-3.5" />
+          )}
+          {showDateAlert && isPastDue ? "Overdue" : showDateAlert && isDueToday ? "Due Today" : format(parseISO(task.due_date), "MMM d")}
+        </div>
 
-          <div className="relative">
-             <div className="w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-[10px] font-bold border-2 border-white shadow-sm" title="Assigned to User">
-                AJ
-             </div>
+        <div className="relative group/assignee">
+          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex items-center justify-center text-[10px] font-bold border-2 border-white shadow-sm transition-transform group-hover/assignee:scale-110" title={task.assigned_to ? `Assigned to ${task.assigned_to}` : "Unassigned"}>
+            {task.assigned_to ? String(task.assigned_to).substring(0, 2).toUpperCase() : "?"}
           </div>
         </div>
       </div>
