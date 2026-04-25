@@ -8,9 +8,13 @@ export interface User {
   last_name?: string;
 }
 
-const API_BASE = "https://api.asknehru.com/api/tasks";
-const EPIC_API_BASE = "https://api.asknehru.com/api/epics";
-const AUTH_API_BASE = "https://api.asknehru.com/api/auth";
+const DEFAULT_API_ORIGIN = "https://api.asknehru.com";
+const API_ORIGIN = (process.env.NEXT_PUBLIC_API_BASE_URL || DEFAULT_API_ORIGIN).replace(/\/+$/, "");
+const API_ROOT = `${API_ORIGIN}/api`;
+
+const API_BASE = `${API_ROOT}/tasks/`;
+const EPIC_API_BASE = `${API_ROOT}/epics/`;
+const AUTH_API_BASE = `${API_ROOT}/auth`;
 
 function getHeaders() {
   const headers: Record<string, string> = {
@@ -76,7 +80,7 @@ export async function createEpic(data: Omit<Epic, "id" | "created_at" | "updated
 }
 
 export async function updateTask(id: number, updates: Partial<Task>): Promise<Task> {
-  const res = await fetch(`${API_BASE}/${id}`, {
+  const res = await fetch(`${API_BASE}${id}/`, {
     method: "PATCH",
     headers: getHeaders(),
     body: JSON.stringify(updates),
@@ -86,7 +90,7 @@ export async function updateTask(id: number, updates: Partial<Task>): Promise<Ta
 }
 
 export async function deleteTask(id: number): Promise<void> {
-  const res = await fetch(`${API_BASE}/${id}`, {
+  const res = await fetch(`${API_BASE}${id}/`, {
     method: "DELETE",
     headers: getHeaders(),
   });
@@ -94,7 +98,7 @@ export async function deleteTask(id: number): Promise<void> {
 }
 
 export async function deleteEpic(id: number): Promise<void> {
-  const res = await fetch(`${EPIC_API_BASE}/${id}`, {
+  const res = await fetch(`${EPIC_API_BASE}${id}/`, {
     method: "DELETE",
     headers: getHeaders(),
   });
