@@ -1,5 +1,13 @@
 import { Task, Status, Epic } from "@/types/task";
 
+export interface User {
+  id: number;
+  username: string;
+  email: string;
+  first_name?: string;
+  last_name?: string;
+}
+
 const API_BASE = "https://api.asknehru.com/api/tasks";
 const EPIC_API_BASE = "https://api.asknehru.com/api/epics";
 const AUTH_API_BASE = "https://api.asknehru.com/api/auth";
@@ -17,13 +25,16 @@ function getHeaders() {
   return headers;
 }
 
-export async function loginApi(usernameOrEmail: string, password: string): Promise<{ token: string }> {
+export async function loginApi(usernameOrEmail: string, password: string): Promise<{ token: string, user: User }> {
   const res = await fetch(`${AUTH_API_BASE}/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ usernameOrEmail, password }),
+    body: JSON.stringify({ username: usernameOrEmail, password }),
   });
-  if (!res.ok) throw new Error("Invalid credentials");
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.message || `Invalid credentials (Status: ${res.status})`);
+  }
   return res.json();
 }
 

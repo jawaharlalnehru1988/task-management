@@ -10,6 +10,7 @@ import { Task, Status, Priority, COLUMNS, PRIORITY_WEIGHT, Epic } from "@/types/
 import { TaskCard } from "@/components/TaskCard";
 import { TaskDetailsModal } from "@/components/TaskDetailsModal";
 import { AddTaskModal } from "@/components/AddTaskModal";
+import { Navbar } from "@/components/Navbar";
 import { fetchTasks, fetchEpics, createEpic, createTask, updateTask, deleteTask as deleteApiTask, deleteEpic as deleteApiEpic } from "@/lib/api";
 
 export default function KanbanBoard() {
@@ -358,8 +359,12 @@ export default function KanbanBoard() {
          </div>
       </aside>
 
-      {/* Main Board View */}
-      <main className="flex-1 overflow-hidden flex flex-col p-4 md:p-8">
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <Navbar />
+        
+        {/* Main Board View */}
+        <main className="flex-1 overflow-hidden flex flex-col p-4 md:p-8">
         <header className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0">
           <div>
             <h2 className="text-2xl font-semibold tracking-tight text-gray-900 flex items-center gap-2">
@@ -448,6 +453,7 @@ export default function KanbanBoard() {
           })}
         </div>
       </main>
+    </div>
 
       <AnimatePresence>
         {selectedTask && (
