@@ -33,8 +33,7 @@ jobs:
         with:
           name: build-artifact
           path: |
-            .next/
-            public/
+            out/
             package.json
             package-lock.json
 
@@ -59,9 +58,9 @@ jobs:
           source: "build-files/*"
           target: "/var/www/task-management/out/"
           strip_components: 1
-          rm: true # This will remove files in the target before transfer
+          rm: true 
 
-      - name: Restart Nginx
+      - name: Reload Nginx
         uses: appleboy/ssh-action@master
         with:
           host: 91.99.67.35
@@ -69,4 +68,4 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           passphrase: ${{ secrets.SSH_PASSPHRASE }}
           script: |
-            sudo systemctl restart nginx
+            sudo nginx -t && sudo systemctl reload nginx
