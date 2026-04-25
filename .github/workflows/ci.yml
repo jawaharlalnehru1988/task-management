@@ -57,7 +57,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           passphrase: ${{ secrets.SSH_PASSPHRASE }}
           source: "build-files/*"
-          target: "/var/www/asknehru-admin/build/"
+          target: "/var/www/task-management/out/"
           strip_components: 1
           rm: true # This will remove files in the target before transfer
 
