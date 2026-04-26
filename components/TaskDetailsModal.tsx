@@ -59,12 +59,7 @@ export function TaskDetailsModal({
     }
   };
 
-  const [isEditingAssignee, setIsEditingAssignee] = useState(false);
-  const [editAssigneeValue, setEditAssigneeValue] = useState(task.assigned_to_username || "");
-  const handleAssigneeSave = () => {
-    setIsEditingAssignee(false);
-    // assigned_to is a read-only display field here; editing not wired to ID lookup
-  };
+
   const isPastDue = isPast(parseISO(task.due_date)) && !isToday(parseISO(task.due_date));
   const isDueToday = isToday(parseISO(task.due_date));
   const showDateAlert = (isPastDue || isDueToday) && task.status !== "Completed";

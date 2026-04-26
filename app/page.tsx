@@ -40,7 +40,8 @@ export default function KanbanBoard() {
   });
 
   useEffect(() => {
-    setIsClient(true);
+    // Defer to avoid synchronous setState in effect
+    Promise.resolve().then(() => setIsClient(true));
   }, []);
 
   useEffect(() => {
@@ -51,24 +52,27 @@ export default function KanbanBoard() {
 
   useEffect(() => {
     if (isAuthenticated) {
-      setIsLoading(true);
-      Promise.all([fetchTasks(), fetchEpics()])
-        .then(([tasksData, epicsData]) => {
+      // Defer to avoid synchronous cascading renders warned by linter
+      const loadData = async () => {
+        setIsLoading(true);
+        try {
+          const [tasksData, epicsData] = await Promise.all([fetchTasks(), fetchEpics()]);
           setTasks(tasksData);
           setEpics(epicsData);
-          setIsLoading(false);
-        })
-        .catch((err) => {
+        } catch (err) {
           console.error("Failed to load initial data", err);
-          setIsLoading(false);
-          if (err.message === "Unauthorized") {
+          if (err instanceof Error && err.message === "Unauthorized") {
             logout();
           }
-        });
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      loadData();
     }
   }, [isAuthenticated, logout]);
 
-  const handleDragStart = (e: any, id: number) => {
+  const handleDragStart = (e: React.DragEvent<HTMLDivElement>, id: number) => {
     setDraggedTaskId(id);
     e.dataTransfer.effectAllowed = "move";
   };

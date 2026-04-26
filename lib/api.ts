@@ -1,4 +1,4 @@
-import { Task, Status, Epic } from "@/types/task";
+import { Task, Epic } from "@/types/task";
 
 export interface User {
   id: number;

@@ -13,13 +13,14 @@ export function TaskCard({
   onSelect,
 }: {
   task: Task;
-  onDragStart: (e: any, id: number) => void;
+  onDragStart: (e: React.DragEvent<HTMLDivElement>, id: number) => void;
   onDelete: () => void;
   onStatusChange?: () => void;
   onSelect: () => void;
 }) {
-  const isPastDue = isPast(parseISO(task.due_date)) && !isToday(parseISO(task.due_date));
-  const isDueToday = isToday(parseISO(task.due_date));
+  const dueDate = parseISO(task.due_date);
+  const isPastDue = isPast(dueDate) && !isToday(dueDate);
+  const isDueToday = isToday(dueDate);
   const showDateAlert = (isPastDue || isDueToday) && task.status !== "Completed";
 
   return (
@@ -31,7 +32,7 @@ export function TaskCard({
       exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
       transition={{ type: "spring", stiffness: 500, damping: 30 }}
       draggable
-      onDragStart={(e: any) => onDragStart(e, task.id)}
+      onDragStart={(e) => onDragStart(e as unknown as React.DragEvent<HTMLDivElement>, task.id)}
       onClick={onSelect}
       className={cn(
         "group bg-white p-5 rounded-2xl shadow-sm border border-gray-100 hover:shadow-xl hover:border-blue-100 cursor-grab active:cursor-grabbing w-full flex flex-col gap-4 relative transition-all duration-300",
@@ -85,7 +86,7 @@ export function TaskCard({
             ) : (
               <Calendar className="w-3.5 h-3.5" />
             )}
-            {showDateAlert && isPastDue ? "Overdue" : showDateAlert && isDueToday ? "Due Today" : format(parseISO(task.due_date), "MMM d")}
+            {showDateAlert && isPastDue ? "Overdue" : showDateAlert && isDueToday ? "Due Today" : format(dueDate, "MMM d")}
           </div>
           <div className="text-[11px] text-gray-500 truncate max-w-[145px]" title={task.created_by_username ? `Created by ${task.created_by_username}` : "Creator unknown"}>
             {task.created_by_username ? `By ${task.created_by_username}` : "By Unknown"}
@@ -99,7 +100,7 @@ export function TaskCard({
 
         <div className="relative group/assignee">
           <div className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex items-center justify-center text-[10px] font-bold border-2 border-white shadow-sm transition-transform group-hover/assignee:scale-110" title={task.assigned_to_username ? `Assigned to ${task.assigned_to_username}` : "Unassigned"}>
-            {task.assigned_to_username ? String(task.assigned_to_username).substring(0, 2).toUpperCase() : "?"}
+            {task.assigned_to_username ? task.assigned_to_username.substring(0, 2).toUpperCase() : "?"}
           </div>
         </div>
       </div>

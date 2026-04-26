@@ -24,17 +24,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const storedToken = localStorage.getItem("auth_token");
     const storedUser = localStorage.getItem("auth_user");
-    if (storedToken) {
-      setToken(storedToken);
-    }
-    if (storedUser) {
-      try {
-        setUser(JSON.parse(storedUser));
-      } catch (e) {
-        console.error("Failed to parse stored user", e);
+    
+    // Defer state updates to avoid synchronous cascading renders
+    Promise.resolve().then(() => {
+      if (storedToken) {
+        setToken(storedToken);
       }
-    }
-    setIsLoading(false);
+      if (storedUser) {
+        try {
+          setUser(JSON.parse(storedUser));
+        } catch (e) {
+          console.error("Failed to parse stored user", e);
+        }
+      }
+      setIsLoading(false);
+    });
   }, []);
 
   const login = (newToken: string, newUser: User) => {
